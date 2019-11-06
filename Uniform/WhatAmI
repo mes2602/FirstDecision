@@ -1,0 +1,6 @@
+This is the uniform omniscient case. 
+Thresholds for agents are drawn from the uniform distribution on [zMin, zMax].
+Social updating following decisions is 'omniscient'; that is, every agent knows
+every other agent's threshold and adjusts the social information from that other agent 
+accordingly, so that an agent with a low threshold provides (perhaps) less social information
+than an agent with a higher threshold.
