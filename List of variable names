@@ -1,0 +1,70 @@
+List of variable names
+For Individual Metric: 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Decisions: 
+
+maxWaves    The maximum number of waves it took for agents to either decide
+                or run out of social information
+
+numFDA      The actual number of accurate first decision counted so far
+numFDW      The actual number of wrong first decisions counted so far
+
+perFDA      Percent of trials with an accurate first decision
+perFDW      Percent of trials with a wrong first decision
+       10x3. 3: [FDA,FDW,combined]. 10 for waves; starts at first wave
+
+wavesAcc    Records number of agents making accurate decision in each wave
+wavesDec    Records number of agents deciding in each wave
+wavesWrong  Records number of agents deciding wrongly in each wave
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Social:
+
+avgSecUpFDA         Average amount of social information made available 
+   (Omniscient)         after first wave conditioned on accurate first decision
+
+%------- the below are not currently generated ---------------------------
+avgSecUpFDW         Average amount of social information made available 
+   (Omniscient)         after second wave conditioned on wrong first decision
+avgSecUp            Average amount of social information made available 
+    (Omniscient)        after second wave
+%--------------------------------------------------------------------------
+
+avgSecUpFDASelf     Average amount of social information made available 
+    (Self-referential)   after first wave conditioned on accurate first decision
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Thresholds:
+
+avgFDThresh     Average threshold of first decider
+decidersHist    A list of the thresholds of agents who made a decision
+FDThreshHist    A list of first decider thresholds; may be used to generate histogram
+rightDecidersHist   A list of thresholds of agents who decided correctly
+
+firstWaveHistFDA    A list thresholds of agents in the first wave 
+                            conditioned on accurate first decision
+firstWaveHistFDW    A list thresholds of agents in the first wave 
+                            conditioned on wrong first decision
+firstWaveHist       A list thresholds of agents in the first wave;
+                             disregards first decision accuracy
+
+secondWaveHistFDA    A list thresholds of agents in the second wave 
+                            conditioned on accurate first decision
+secondWaveHistFDW    A list thresholds of agents in the second wave 
+                            conditioned on wrong first decision
+secondWaveHist       A list thresholds of agents in the second wave;
+                             disregards first decision accuracy
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Time: 
+
+avgTime         Average time of first decision
+histTime        A list of first decision times; may be used to generate histogram
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
