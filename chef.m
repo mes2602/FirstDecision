@@ -8,8 +8,10 @@ function chef(folderName,zMin,zMax,n,social)
     %------------------------------------
     % if social = -1, do the histograms for the thresholds
     % of agents in first and second waves (reusing parameter)
-    % if social = 1, calculate total social made available
-    % after first wave
+    % if social = 1, calculate total social made available 
+    % after first wave for Omniscient Case
+    % if social > 1, calculate total social made available
+    % after first wave for Self-referential Case
     
     % Step 1: Check for a cooked file
     % If it exists, load data. If it doesn't, set baselines.
@@ -23,39 +25,57 @@ function chef(folderName,zMin,zMax,n,social)
         NT = gru1.NT;
         avgTime = gru1.avgTime; histTime = gru1.histTime;
         FDThreshHist = gru1.FDThreshHist; avgFDThresh = gru1.avgFDThresh;
-        rightDecidersHist = gru1.rightDecidersHist;
-        decidersHist = gru1.decidersHist;
-        firstWaveHistFDA = gru1.firstWaveHistFDA;
-        firstWaveHistFDW = gru1.firstWaveHistFDW;
-        firstWaveHist = gru1.firstWaveHist;
-        secondWaveHistFDA = gru1.secondWaveHistFDA;
-        secondWaveHistFDW = gru1.secondWaveHistFDW;
-        secondWaveHist = gru1.secondWaveHist;
+        
+        if social < 0
+            firstWaveHistFDA = gru1.firstWaveHistFDA;
+            firstWaveHistFDW = gru1.firstWaveHistFDW;
+            firstWaveHist = gru1.firstWaveHist;
+            secondWaveHistFDA = gru1.secondWaveHistFDA;
+            secondWaveHistFDW = gru1.secondWaveHistFDW;
+            secondWaveHist = gru1.secondWaveHist;
+            if social < -1
+                rightDecidersHist = gru1.rightDecidersHist;
+                 decidersHist = gru1.decidersHist;
+            end
+        end
         wavesAcc = gru1.wavesAcc; maxWaves = gru1.maxWaves;
         wavesWrong = gru1.wavesWrong; wavesDec = gru1.wavesDec;
         perFDA = gru1.perFDA; perFDW = gru1.perFDW;
-        avgSecUp = gru1.avgSecUp; avgSecUpFDA = gru1.avgSecUpFDA;
-        avgSecUpFDW = gru1.avgSecUpFDW; 
-        avgSecUpFDASelf = gru1.avgSecUpFDASelf;
+        if social > 0
+            avgSecUp = gru1.avgSecUp; avgSecUpFDA = gru1.avgSecUpFDA;
+            avgSecUpFDW = gru1.avgSecUpFDW; 
+        end
+        
+        avgFDThreshSquared = gru1.avgFDThreshSquared; %E[X^2], for variance
+        
         numFDA = gru1.numFDA; numFDW = gru1.numFDW;
+        
         
     else
         DNE = 1;
         topBatch = 0; % this iterates the current batch number
         avgTime = 0; histTime = 0;  NT = 0;
         FDThreshHist = 0; avgFDThresh = 0;
-        rightDecidersHist = zMin; decidersHist = zMin;
-        firstWaveHistFDA = zMin;
-        firstWaveHistFDW = zMin;
-        firstWaveHist = zMin;
-        secondWaveHistFDA = zMin;
-        secondWaveHistFDW = zMin;
-        secondWaveHist = zMin;
-        maxWaves = 10; wavesAcc = zeros(maxWaves, 3); % [ num when FDA, num when FDW, num]
+        
+        
+            firstWaveHistFDA = zMin;
+            firstWaveHistFDW = zMin;
+            firstWaveHist = zMin;
+            secondWaveHistFDA = zMin;
+            secondWaveHistFDW = zMin;
+            secondWaveHist = zMin;
+           
+            rightDecidersHist = zMin; decidersHist = zMin;
+        maxWaves = 10; wavesAcc = zeros(maxWaves, 3,3); % [ num when FDA, num when FDW, num]
+                                                        % [bootCI for each
+                                                        % (-, + )
         wavesWrong = wavesAcc; wavesDec = wavesWrong;
+        
         perFDA = 0; perFDW = 0; numFDA = 0; numFDW = 0;
-        avgSecUp = 0; avgSecUpFDA = 0; avgSecUpFDW = 0;
-        avgSecUpFDASelf = 0;
+        
+            avgSecUp = 0; avgSecUpFDA = 0; avgSecUpFDW = 0;
+        
+        avgFDThreshSquared = 0;
     end
 
     %-------------------------------------
@@ -73,8 +93,13 @@ function chef(folderName,zMin,zMax,n,social)
         maxWaves = min(maxWaves, gru.maxWaves);
         
             % Time information
+            if topBatch == 0
             [avgTime, histTime] = timeStuffBasic(avgTime, histTime,...
                                     gru.batchSize,gru.times,NT);
+            else
+                [avgTime, ~] = timeStuffBasic(avgTime, histTime,...
+                                    gru.batchSize,gru.times,NT);
+            end
                                 
             % Decision information
             [perFDA, perFDW, totAcc,totWrong,totDec,numFDA,numFDW,...
@@ -84,14 +109,24 @@ function chef(folderName,zMin,zMax,n,social)
             
              % Social information
             if social > 0
-            [avgSecUpFDA,avgSecUpFDASelf] ...
-                = getAvgSecUpFDA(gru.agents, gru.FDI, gru.times,...
-                            n, gru.batchSize, avgSecUpFDA, numFDA);
+                if social > 1
+            [avgSecUpFDA, avgSecUpFDW,avgSecUp]...
+                = getAvgSecUpSelf(gru.agents, gru.FDI, gru.times, n, gru.batchSize, ...
+                            avgSecUpFDA, numFDA,...
+                            avgSecUpFDW, numFDW,...
+                            avgSecUp);
+                else
+                    [avgSecUpFDA, avgSecUpFDW,avgSecUp]...
+                = getAvgSecUpOmni(gru.agents, gru.FDI, gru.times, n, gru.batchSize, ...
+                            avgSecUpFDA, numFDA,...
+                            avgSecUpFDW, numFDW,...
+                            avgSecUp);
+                end
             end
             % Threshold information
             % Technically, the below is threshold information, 
             % not social information
-            if social < 0
+            if social < 0 || topBatch == 0
                 [fwFDA, fwFDW,fw,swFDA,swFDW ,sw]...
                  = waveHist(gru.agents, gru.batchSize,n,gru.FDI);
                 firstWaveHistFDA = [firstWaveHistFDA; fwFDA];
@@ -100,15 +135,24 @@ function chef(folderName,zMin,zMax,n,social)
                 secondWaveHistFDA = [secondWaveHistFDA; swFDA];
                 secondWaveHistFDW = [secondWaveHistFDW; swFDW];
                 secondWaveHist = [secondWaveHist; sw];
+                if social < -1 || topBatch == 0
+                 decidersHist = ...
+                [decidersHist;getDecidersHist(gru.agents,gru.batchSize,n)];
+                rightDecidersHist = ...
+                [rightDecidersHist;getRightDecidersHist(gru.agents,gru.batchSize,n)];
+                end
             end
             
-            rdHist = getRightDecidersHist(gru.agents,gru.batchSize,n);
-            [FDThreshHist, avgFDThresh] = getFDTHresh(gru.agents,... 
-                gru.batchSize,NT,avgFDThresh,FDThreshHist,gru.FDI);
-            rightDecidersHist = [rightDecidersHist;rdHist];
+            if topBatch == 0
+            [FDThreshHist, avgFDThresh,avgFDThreshSquared] = getFDTHresh(gru.agents,... 
+                gru.batchSize,NT,avgFDThresh,avgFDThreshSquared,FDThreshHist,gru.FDI);
+            else
+                [~, avgFDThresh,avgFDThreshSquared] = getFDTHresh(gru.agents,... 
+                gru.batchSize,NT,avgFDThresh,avgFDThreshSquared,FDThreshHist,gru.FDI);
+            end
             
-            [dHist] = getDecidersHist(gru.agents,gru.batchSize,n);
-            decidersHist = [decidersHist;dHist];
+            
+           
                     
                           
              
@@ -204,36 +248,132 @@ end
 
 % Get average social update after first wave (update available to members
 % of second wave)
-function [avgSecUpFDA,avgSecUpFDASelf] = getAvgSecUpFDA(agents, FDI, times, n, batchSize, ...
-                            avgSecUpFDA, numFDA)
-    sumAvgUp = avgSecUpFDA * numFDA;
+function [avgSecUpFDASelf,avgSecUpFDWSelf,avgSecUpSelf]...
+                = getAvgSecUpSelf(agents, FDI, times, n, batchSize, ...
+                             avgSecUpFDASelf, numFDA,...
+                             avgSecUpFDWSelf, numFDW,...
+                             avgSecUpSelf)
+                        
+    sumAvgUpFDASelf = avgSecUpFDASelf * numFDA;
+    sumAvgUpFDWSelf = avgSecUpFDWSelf * numFDW;
+    sumAvgUpSelf = avgSecUpSelf * (numFDA + numFDW);
     
     for i = 1:batchSize
+        time = times(i);
+                    
+        f1 = 0; sumRuSelf = 0;
+        
         if FDI(i) > 0
             numFDA = numFDA + 1;
-            time = times(i);
-            f1 = 0; sumRf = 0; sumRu = 0;
             for j = 1:n
                 
                 z = agents(i,1,j);
                 if agents(i,3,j) == 1
                     f1 = f1 + 1;
-                    sumRf = sumRf + MoIMulti(z,0,z,time);
+                    
                 else
-                    sumRu = sumRu + MoIMulti(z,0,z,time);
+                    sumRuSelf = sumRuSelf + MoIMulti(z,-z,0,time);
+                end
+                
+            end
+            % Remove first decider's information from sumRu
+            z = agents(i,1,abs(FDI(i)));
+            sumRuSelf = sumRuSelf - MoIMulti(z,-z,0,time);
+            u1 = n - 1 - f1;
+            % Note that sumRu is a sum of R-, not R+
+            sumAvgUpSelf = sumAvgUpSelf - (f1 - u1 + 1)*(sumRuSelf);
+            sumAvgUpFDASelf = sumAvgUpFDASelf - (f1 - u1 + 1)*(sumRuSelf);
+        else
+            % The first decision was wrong
+            numFDW = numFDW + 1;
+
+            for j = 1:n
+                
+                z = agents(i,1,j);
+                if agents(i,3,j) == -1
+                    f1 = f1 + 1;
+                else
+                    sumRuSelf = sumRuSelf + MoIMulti(z,0,z,time);
                 end
                 
             end
             z = agents(i,1,abs(FDI(i)));
-            sumRu = sumRu - MoIMulti(z,0,z,time);
+            sumRuSelf = sumRuSelf - MoIMulti(z,0,z,time);
             u1 = n - 1 - f1;
-            sumAvgUpSelf = sumAvgUpSelf + (f1 - u1 + 1)*(sumRu/u1);
-            sumAvgUp = sumAvgUp + ((sumRu + sumRf)/u1);
+            sumAvgUpSelf = sumAvgUpSelf - (f1 - u1 + 1)*(sumRuSelf);
+            sumAvgUpFDWSelf = sumAvgUpFDWSelf - (f1 -u1 + 1)*(sumRuSelf);
         end
     end
     
-    avgSecUpFDA = sumAvgUp/numFDA;
-    avgSecUpFDASelf = sumAvgUpSelf/numFDA;
+ 
+    avgSecUpFDASelf = sumAvgUpFDASelf/numFDA;
+    avgSecUpFDWSelf = sumAvgUpFDWSelf/numFDW;
+    avgSecUpSelf = sumAvgUpSelf/(numFDA + numFDW);
+    
+end
+
+function [avgSecUpFDA, avgSecUpFDW,avgSecUp]...
+                = getAvgSecUpOmni(agents, FDI, times, n, batchSize, ...
+                            avgSecUpFDA,  numFDA,...
+                            avgSecUpFDW,  numFDW,...
+                            avgSecUp)
+                        
+    sumAvgUpFDA = avgSecUpFDA * numFDA;
+    sumAvgUpFDW = avgSecUpFDW * numFDW;
+    sumAvgUp = avgSecUp * (numFDA + numFDW);
+    
+    for i = 1:batchSize
+        FDthresh = agents(i,1,abs(FDI(i)));
+        time = times(i);
+                    
+   
+        sumRfOmni = 0; sumRuOmni = 0;
+        
+        if FDI(i) > 0
+            numFDA = numFDA + 1;
+            for j = 1:n
+                
+                z = agents(i,1,j);
+                if agents(i,3,j) == 1
+                    sumRfOmni = sumRfOmni + MoIMulti(z,z-FDthresh,z,time);
+                    
+                else
+                    sumRuOmni = sumRuOmni + MoIMulti(z,-z,z-FDthresh,time);
+                end
+                
+            end
+            % Remove first decider's information from sumRu
+            z = agents(i,1,abs(FDI(i)));
+            sumRuOmni = sumRuOmni - MoIMulti(z,-z,z-FDthresh,time);
+            % Note that sumRu is a sum of R-, not R+
+            sumAvgUp = sumAvgUp + sumRuOmni + sumRfOmni;
+            sumAvgUpFDA = sumAvgUpFDA + (sumRuOmni + sumRfOmni);
+        else
+            % The first decision was wrong
+            numFDW = numFDW + 1;
+
+            for j = 1:n
+                
+                z = agents(i,1,j);
+                if agents(i,3,j) == -1
+                  
+                    sumRfOmni = sumRfOmni + MoIMulti(z,-z,-z + FDthresh,time);
+                else
+                    sumRuOmni = sumRuOmni + MoIMulti(z,z-FDthresh,z,time);
+                end
+                
+            end
+            z = agents(i,1,abs(FDI(i)));
+            sumRuOmni = sumRuOmni - MoIMulti(z,z-FDthresh,z,time);
+    
+            sumAvgUp = sumAvgUp + (sumRuOmni + sumRfOmni);
+            sumAvgUpFDW = sumAvgUpFDW + sumRuOmni + sumRfOmni;
+        end
+    end
+    
+    avgSecUpFDA = sumAvgUpFDA/numFDA;
+    avgSecUpFDW = sumAvgUpFDW/numFDW;
+    avgSecUp = sumAvgUp/(numFDA + numFDW);
     
 end
 
@@ -282,16 +422,19 @@ function [fwFDA, fwFDW,fw,swFDA,swFDW ,sw] = waveHist(agents, batchSize,n,FDI)
 end
 
 % Get list of First Decider thresholds, and their average
-function [FDThreshHist, avgFDThresh] = getFDTHresh(agents,... 
-                batchsize,NT,avgFDThresh,FDThreshHist,FDI)
+function [FDThreshHist, avgFDThresh, avgFDThreshSquared] = getFDTHresh(agents,... 
+                batchsize,NT,avgFDThresh, avgFDThreshSquared,FDThreshHist,FDI)
             avgFDThresh = avgFDThresh * (NT-batchsize);
+            avgFDThreshSquared = avgFDThreshSquared * (NT - batchsize);
            lengthHist = length(FDThreshHist);
             for i = 1:batchsize
                 thresh = agents(i,1,abs(FDI(i)));
                 FDThreshHist(lengthHist + i) = thresh;
                 avgFDThresh = avgFDThresh + thresh;
+                avgFDThreshSquared = avgFDThreshSquared + thresh^2;
             end
             avgFDThresh = avgFDThresh / NT;
+            avgFDThreshSquared = avgFDThreshSquared / NT;
 end
 % Get list of thresholds of deciders
 function [dHist] = getDecidersHist(agents,batchSize,n)
@@ -319,3 +462,4 @@ function [rdHist] = getRightDecidersHist(agents,batchSize,n)
         end
     end
 end
+
