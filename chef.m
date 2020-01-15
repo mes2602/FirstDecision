@@ -57,7 +57,7 @@ function chef(folderName,zMin,zMax,n,social)
         avgTime = 0; histTime = 0;  NT = 0;
         FDThreshHist = 0; avgFDThresh = 0;
         
-        
+        if social < 0 % Change these to empty later
             firstWaveHistFDA = zMin;
             firstWaveHistFDW = zMin;
             firstWaveHist = zMin;
@@ -66,7 +66,8 @@ function chef(folderName,zMin,zMax,n,social)
             secondWaveHist = zMin;
            
             rightDecidersHist = zMin; decidersHist = zMin;
-        maxWaves = 10; wavesAcc = zeros(maxWaves, 3,3); % [ num when FDA, num when FDW, num]
+        end
+        maxWaves = 10; wavesAcc = zeros(maxWaves, 3); % [ num when FDA, num when FDW, num]
                                                         % [bootCI for each
                                                         % (-, + )
         wavesWrong = wavesAcc; wavesDec = wavesWrong;
@@ -86,6 +87,13 @@ function chef(folderName,zMin,zMax,n,social)
 
     filenameB = strcat(folderName, '/Raw_n',num2str(n),...
         '_batch_', num2str(topBatch + 1), '.mat');
+    %FDTimeHist = [];
+    %FDThreshHist = [];
+    histFDA = []; histFDW = []; histIrr = [];
+    avgSecUpFDAhist = []; avgSecUpFDWhist = []; avgSecUphist = [];
+    bootNum = 1500;
+    histLength = 500;
+   
     
     while isfile(filenameB)
         gru = load(filenameB);
@@ -93,28 +101,30 @@ function chef(folderName,zMin,zMax,n,social)
         maxWaves = min(maxWaves, gru.maxWaves);
         
             % Time information
-            if topBatch == 0
+            
             [avgTime, histTime] = timeStuffBasic(avgTime, histTime,...
                                     gru.batchSize,gru.times,NT);
-            else
-                [avgTime, ~] = timeStuffBasic(avgTime, histTime,...
-                                    gru.batchSize,gru.times,NT);
-            end
+
+           
                                 
             % Decision information
             [perFDA, perFDW, totAcc,totWrong,totDec,numFDA,numFDW,...
-                    wavesAcc, wavesWrong, wavesDec] = ...
+                    wavesAcc, wavesWrong, wavesDec,...
+                    histFDA, histFDW, histIrr] = ...
             getWaves(gru.agents, gru.FDI, gru.batchSize, n, NT, maxWaves, ...
-                    wavesAcc, wavesWrong, wavesDec, perFDA, perFDW,numFDA,numFDW);
+                    wavesAcc, wavesWrong, wavesDec, perFDA, perFDW,numFDA,numFDW,...
+                    histFDA, histFDW, histIrr);
             
              % Social information
             if social > 0
                 if social > 1
-            [avgSecUpFDA, avgSecUpFDW,avgSecUp]...
+            [avgSecUpFDA, avgSecUpFDW,avgSecUp,...
+                avgSecUpFDAhist, avgSecUpFDWhist, avgSecUphist]...
                 = getAvgSecUpSelf(gru.agents, gru.FDI, gru.times, n, gru.batchSize, ...
                             avgSecUpFDA, numFDA,...
                             avgSecUpFDW, numFDW,...
-                            avgSecUp);
+                            avgSecUp, avgSecUpFDAhist,...
+                            avgSecUpFDWhist, avgSecUphist);
                 else
                     [avgSecUpFDA, avgSecUpFDW,avgSecUp]...
                 = getAvgSecUpOmni(gru.agents, gru.FDI, gru.times, n, gru.batchSize, ...
@@ -126,7 +136,7 @@ function chef(folderName,zMin,zMax,n,social)
             % Threshold information
             % Technically, the below is threshold information, 
             % not social information
-            if social < 0 || topBatch == 0
+            if social < 0 
                 [fwFDA, fwFDW,fw,swFDA,swFDW ,sw]...
                  = waveHist(gru.agents, gru.batchSize,n,gru.FDI);
                 firstWaveHistFDA = [firstWaveHistFDA; fwFDA];
@@ -143,13 +153,10 @@ function chef(folderName,zMin,zMax,n,social)
                 end
             end
             
-            if topBatch == 0
+            
             [FDThreshHist, avgFDThresh,avgFDThreshSquared] = getFDTHresh(gru.agents,... 
                 gru.batchSize,NT,avgFDThresh,avgFDThreshSquared,FDThreshHist,gru.FDI);
-            else
-                [~, avgFDThresh,avgFDThreshSquared] = getFDTHresh(gru.agents,... 
-                gru.batchSize,NT,avgFDThresh,avgFDThreshSquared,FDThreshHist,gru.FDI);
-            end
+      
             
             
            
@@ -165,6 +172,44 @@ function chef(folderName,zMin,zMax,n,social)
     
     %-----------------------------------------------------
     
+    %-----------------------------------------------------
+    % Step 2.5: Confidence intervals
+    
+    % Time
+        FDTimeCI = bootci(bootNum,@mean,histTime);
+    % FD Threshold
+       % FDThreshCI = bootci(bootNum,@mean,FDThreshHist);
+    % Waves...
+    
+        for i = 1:maxWaves
+            
+            wavesAcc(i,1,2:3) = bootci(bootNum, @mean, histFDA(i,1,:));
+            wavesAcc(i,2,2:3) = bootci(bootNum, @mean, histFDW(i,1,:));
+            wavesAcc(i,3,2:3) = bootci(bootNum, @mean, histIrr(i,1,:));
+            
+            wavesWrong(i,1,2:3) = bootci(bootNum, @mean, histFDA(i,2,:));
+            wavesWrong(i,2,2:3) = bootci(bootNum, @mean, histFDW(i,2,:));
+            wavesWrong(i,3,2:3) = bootci(bootNum, @mean, histIrr(i,2,:));
+            
+            wavesDec(i,1,2:3) = bootci(bootNum, @mean, histFDA(i,3,:));
+            wavesDec(i,2,2:3) = bootci(bootNum, @mean, histFDW(i,3,:));
+            wavesDec(i,3,2:3) = bootci(bootNum, @mean, histIrr(i,3,:));
+        end
+    
+    % Social updates
+        if length(avgSecUpFDAhist) > 0
+            avgSecUpFDACI = bootci(bootNum, @mean, avgSecUpFDAhist);
+        end
+        if length(avgSecUpFDWhist) > 0
+            avgSecUpFDWCI = bootci(bootNum, @mean, avgSecUpFDWhist);
+        end
+        if length(avgSecUphist) > 0
+            avgSecUpCI = bootci(bootNum, @mean, avgSecUphist);
+        end
+    % Destroy giant hists
+    clearvars histFDA histFDW histIrr i numFDA numFDW gru avgSecUpFDAhist avgSecUpFDWhist avgSecUphist
+    histTime = histTime(1:min(histLength, length(histTime))); 
+    FDThreshHist = FDThreshHist(1:min(histLength, length(FDThreshHist)));
     %-------------------------------------------------
     % Step 3: save.
     if DNE < 1
@@ -190,9 +235,11 @@ end
 
 % Basic processing; who was in what wave, how accurate were they
 function [perFDA, perFDW, totAcc,totWrong,totDec,numFDA,numFDW,...
-            wavesAcc, wavesWrong, wavesDec] = ...
+            wavesAcc, wavesWrong, wavesDec,...
+            histFDA, histFDW, histIrr] = ...
     getWaves(agents, FDI, batchSize, n, NT, maxWaves, ...
-            wavesAcc, wavesWrong, wavesDec, perFDA, perFDW, numFDA, numFDW)
+            wavesAcc, wavesWrong, wavesDec, perFDA, perFDW, numFDA, numFDW,...
+            histFDA, histFDW, histIrr)
     % Goal: num
     pNT = NT - batchSize;
 %     numFDA = perFDA*(pNT); 
@@ -208,6 +255,7 @@ function [perFDA, perFDW, totAcc,totWrong,totDec,numFDA,numFDW,...
     wD(:,3) = wD(:,3) * pNT;
     
     for i = 1:batchSize
+        wAOld = wA; wWOld = wW; wDOld = wD;
         if FDI(i) > 0
             numFDA = numFDA + 1;
             update = [1,0,1];
@@ -229,6 +277,17 @@ function [perFDA, perFDW, totAcc,totWrong,totDec,numFDA,numFDW,...
                 end
         end
         
+        if FDI(i) > 0
+            histFDA(:,:,numFDA) = ...
+                [wA(:,1)-wAOld(:,1), wW(:,1) - wWOld(:,1), wD(:,1) - wDOld(:,1)];
+        else
+            histFDW(:,:,numFDW) = ...
+                [wA(:,2)-wAOld(:,2), wW(:,2) - wWOld(:,2), wD(:,2) - wDOld(:,2)];
+        end
+        histIrr(:,:,pNT+i) = ...
+                [wA(:,3)-wAOld(:,3), wW(:,3) - wWOld(:,3), wD(:,3) - wDOld(:,3)];
+        
+
     end
     
     wA(:,1) = wA(:,1) / numFDA; wA(:,2) = wA(:,2) / numFDW;
@@ -248,11 +307,13 @@ end
 
 % Get average social update after first wave (update available to members
 % of second wave)
-function [avgSecUpFDASelf,avgSecUpFDWSelf,avgSecUpSelf]...
+function [avgSecUpFDASelf,avgSecUpFDWSelf,avgSecUpSelf,...
+    avgSecUpFDAhist, avgSecUpFDWhist, avgSecUphist]...
                 = getAvgSecUpSelf(agents, FDI, times, n, batchSize, ...
                              avgSecUpFDASelf, numFDA,...
                              avgSecUpFDWSelf, numFDW,...
-                             avgSecUpSelf)
+                             avgSecUpSelf,avgSecUpFDAhist,...
+                             avgSecUpFDWhist, avgSecUphist)
                         
     sumAvgUpFDASelf = avgSecUpFDASelf * numFDA;
     sumAvgUpFDWSelf = avgSecUpFDWSelf * numFDW;
@@ -283,6 +344,10 @@ function [avgSecUpFDASelf,avgSecUpFDWSelf,avgSecUpSelf]...
             % Note that sumRu is a sum of R-, not R+
             sumAvgUpSelf = sumAvgUpSelf - (f1 - u1 + 1)*(sumRuSelf);
             sumAvgUpFDASelf = sumAvgUpFDASelf - (f1 - u1 + 1)*(sumRuSelf);
+            % Update hist arrays
+            avgSecUpFDAhist(length(avgSecUpFDAhist)+1) = - (f1 - u1 + 1)*(sumRuSelf);
+            avgSecUphist(length(avgSecUphist)+1) = - (f1 - u1 + 1)*(sumRuSelf);
+            
         else
             % The first decision was wrong
             numFDW = numFDW + 1;
@@ -302,6 +367,10 @@ function [avgSecUpFDASelf,avgSecUpFDWSelf,avgSecUpSelf]...
             u1 = n - 1 - f1;
             sumAvgUpSelf = sumAvgUpSelf - (f1 - u1 + 1)*(sumRuSelf);
             sumAvgUpFDWSelf = sumAvgUpFDWSelf - (f1 -u1 + 1)*(sumRuSelf);
+            
+            
+            avgSecUpFDWhist(length(avgSecUpFDWhist)+1) = - (f1 - u1 + 1)*(sumRuSelf);
+            avgSecUphist(length(avgSecUphist)+1) = - (f1 - u1 + 1)*(sumRuSelf);
         end
     end
     

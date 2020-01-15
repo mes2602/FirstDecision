@@ -1,7 +1,9 @@
-function saveRaw(n_array,zMin,zMax, zNum, maxWaves,batchSize,batch,foldername,h_a)
+function saveRaw(n_array,zMin,zMax, zNum, maxWaves,...
+    batchSize,batch,foldername,selfVsOmni)
 % This script generates a batch (collection of realizations)
 % of raw data files and saves them 
 % in the appropriate folder
+% selfVsOmni = -1 for pan, else self
 
     szn = length(n_array);
     for i = 1:szn
@@ -44,9 +46,25 @@ function saveRaw(n_array,zMin,zMax, zNum, maxWaves,batchSize,batch,foldername,h_
 
         %-------------------------------------------------
         % Run the parfor loop
-            parfor j = 1:batchSize
+        % Changing this to a for for now.
+        qu = strcat('Generating data: n = ', num2str(n),...
+            ', \theta_{min}  = ', num2str(zMin),...
+            ', \theta_{max} = ', num2str(zMax));
+        f = waitbar(0,'1','Name',qu,...
+    'CreateCancelBtn','setappdata(gcbf,''canceling'',1)');
+
+setappdata(f,'canceling',0);
+            for j = 1:batchSize
                 % get array of thresholds drawn from appropriate
                 % distribution:
+                if getappdata(f,'canceling')
+                    delete(f)
+                    break
+                end
+                qu = strcat(num2str(j), ' of ', num2str(batchSize),...
+                    ' trials begun...');
+                waitbar(j/batchSize,f,sprintf(qu))
+                
                         switch zNum
                             case 0
                                 z = (zMax-zMin)*rand(n,1)+zMin;
@@ -60,9 +78,14 @@ function saveRaw(n_array,zMin,zMax, zNum, maxWaves,batchSize,batch,foldername,h_
                                 z = manyBern(zMin,n,h_a);
                         end
                         
-                % Run one realization:        
+                % Run one realization: 
+                if selfVsOmni == -1
                 [FDIndex, FDTime, waveIndex, dummyagents] = ...
                     oneRunPan(n, z, maxWaves);
+                else
+                   [FDIndex, FDTime, waveIndex, dummyagents] = ...
+                    oneRunSelf(n, z, maxWaves); 
+                end
 
                     % Call to Pan and Self are interchangeable;
                     % just switch adjective from Pan to Self
@@ -78,6 +101,8 @@ function saveRaw(n_array,zMin,zMax, zNum, maxWaves,batchSize,batch,foldername,h_
 
                 % ---- Secret...agent..agent? -----
                 agents(j,:,:) = dummyagents;
+                
+                
 
             end
          %----------------------------------------------
@@ -88,6 +113,7 @@ function saveRaw(n_array,zMin,zMax, zNum, maxWaves,batchSize,batch,foldername,h_
                 'times','FDI',...
                 'batchSize','maxWaves');
          %-----------------------------------------------
+         delete(f)
     end
 end
 
