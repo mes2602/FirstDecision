@@ -1,0 +1,26 @@
+Thank you for your interest in this paper and these figures.
+
+As you might have noticed, the program files here are in two separate languages. Our data generation occurs in MATLAB (R2019b), and our figure generation is in a Jupyter Notebook. In order for the Notebook to function, the user must first generate the data using the MATLAB file generateData.m.
+
+Steps to useable figures:
+
+1) Run generateData.m. 
+	It is best to leave all of the program files in the same folder. generateData.m will create new folders with data for different cases in the directory it is in. 
+	Data generation might take awhile. If the process is interupted, generateData.m is designed so that if you restart the program, it should pick up where it left off. If you choose, you may speed up the process by:
+
+	a) Designating a larger pool of processors for parpool to use. Do this by opening generateData.m and changing the variable poolSize. 
+
+	b) Not running data for figures you're not interested in. In both generateData.m and the Notebook, there are notes indicating which figures a particular type of data supports to enable better decisions about which data to generate and process. For example, Shed and Tent data is only used in Supplement figure 9, and so may be commented out of generateData.m if there is no interest in that figure.
+
+
+2) Run the first section of the Notebook, titled 'Imports and Utility functions'.
+	If you wish to draw data from or save figures to a directory other than the one containing the Notebook, be sure to change the variables 'baseFolder' and 'lateFolder' at the beginning of this section to reflect the alternative directories.
+
+3) In the next section, 'Data Preparation', run the cells that correspond to the data you have generated or are using. This might also take a little time, but significantly less than the initial generation. 
+
+4) Enjoy your figures! Cells corresponding to each figure go in order of appearance in the paper, beginning after the 'Data Preparation' section of the Notebook. 
+
+
+If you want to use your own parameters, you may do so by first changing the parameters in generateData.m, running generateData.m to create the data, then modifying the parameters in the appropriate section of Data Preparation in the Notebook. Depending on the figure, you might also need to change the parameters in the associated figure cell. 
+
+
