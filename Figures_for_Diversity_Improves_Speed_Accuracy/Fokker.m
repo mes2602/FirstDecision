@@ -17,6 +17,7 @@ part1 = -z:.01:(-.02);
 part3 = .02:.01:z;
 
 x = cat(2,part1,part2,part3);
+
 x0 = ceil(max(size(x))/2);
 
 %t-span
@@ -41,8 +42,7 @@ for i = 1:numT
 end
     
 
-%to plot or not to plot... that is the question. 
-%whether 'tis nobler to s...nm.
+%Option to plot solution. 
 if plotYorN ==1
 %surface plot
     figure
@@ -70,23 +70,21 @@ end
  
 % --------------------------------------------------------------
 function [c,f,s] = pdex1pdep(x,t,u,DuDx)
-% It's gonna give warnings about all these input arguments, but they are
-% actually necessary. It will let us change the function name but not the
-% number of arguments. Little confused, but not gonna fight it.
+% It's going to give warnings about all these input arguments, but they are
+% actually necessary. MATLAB will let us change the function name but not the
+% number of arguments.
 c = 1;
-%f = DuDx/2;
 f = DuDx;
 s = -DuDx;
 % --------------------------------------------------------------
 function u0 = pdex1ic(x)
 
-% l = sym(0);
-% u0 = kroneckerDelta(x,l);
 a = .000001;
-u0 = (1/(2*sqrt(pi*a)))*exp(-(x^2/(4*a))); %This was the version Bhargav sent
-%u0 = a/(pi*(x^2 + a^2)); using a limit def from wolfram
-%u0 = (sin(x/a))/(pi*a);
 %u0 = dirac(x); % This won't integrate.
+
+ % Approximation for initial delta function
+u0 = (1/(2*sqrt(pi*a)))*exp(-(x^2/(4*a))); 
+
 % --------------------------------------------------------------
 function [pl,ql,pr,qr] = pdex1bc(xl,ul,xr,ur,t)
 pl = ul;

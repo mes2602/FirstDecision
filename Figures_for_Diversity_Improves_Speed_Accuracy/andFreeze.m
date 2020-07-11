@@ -11,14 +11,17 @@ dt = 2^(-dtK);
 x = a*sqrt(dt)*randn(n,1);
 time = 0;
 
-% I think I also want a record of ending times, and which direction the exit was. 
-numExitPos = 0; numExitNeg = 0; % These will be counters/indices on the vectors of exit times
-exitNeg = zeros(n,1); exitPos = zeros(n,1); % Preallocating. We'll chop these at the end using the nums.
+% Also records ending times, and which direction the exit was. 
+
+ % These will be counters/indices on the vectors of exit times
+numExitPos = 0; numExitNeg = 0;
+ % Preallocating. We'll chop these at the end using the nums.
+exitNeg = zeros(n,1); exitPos = zeros(n,1);
 
 szX = n;
 
-while (time < stopTime) && (szX > 0) % I want this to run until stopTime or until the agents have all decided
-    
+% I want this to run until stopTime or until the agents have all decided    
+while (time < stopTime) && (szX > 0) 
     [S,L] = bounds(x);
     
     % Let it go until someone hits a boundary, or we reach stopTime
@@ -84,15 +87,15 @@ while (time < stopTime) && (szX > 0) % I want this to run until stopTime or unti
     
 end 
         
-        %So now we just need to chop and we're done.
-        if numExitPos > 0
-            exitPos = exitPos(1:numExitPos,1) ;
-        else
-            exitPos = 0;
-        end
-        
-        if numExitNeg > 0
-            exitNeg = exitNeg(1:numExitNeg,1);
-        else
-            exitNeg = 0;
-        end
+%So now we just need to chop and we're done.
+if numExitPos > 0
+    exitPos = exitPos(1:numExitPos,1) ;
+else
+    exitPos = 0;
+end
+
+if numExitNeg > 0
+    exitNeg = exitNeg(1:numExitNeg,1);
+else
+    exitNeg = 0;
+end
